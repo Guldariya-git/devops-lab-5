@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     stages {
-
         stage('Checkout') {
             steps {
                 echo 'GitHub-тан код алу'
@@ -10,11 +9,14 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build (Maven in Docker)') {
             steps {
-                echo 'Java қолданбаны жинау'
+                echo 'Maven контейнер арқылы билд'
                 sh '''
-                cd app
+                docker run --rm \
+                -v $PWD/app:/app \
+                -w /app \
+                maven:3.9.6-eclipse-temurin-17 \
                 mvn clean package -DskipTests
                 '''
             }
@@ -22,29 +24,15 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo 'Docker image құрастыру'
-                sh 'docker build -t devops-app .'
+                echo 'Docker image жинау'
+                sh 'docker build -t my-app .'
             }
         }
 
         stage('Run App') {
             steps {
-                echo 'Контейнерді іске қосу'
-                sh 'docker-compose up -d'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo 'Қолданбаны тексеру'
-                sh 'curl http://localhost:5000 || true'
-            }
-        }
-
-        stage('Cleanup') {
-            steps {
-                echo 'Тазалау'
-                sh 'docker-compose down'
+                echo 'Контейнер іске қосу'
+                sh 'docker run -d -p 8081:8080 my-app'
             }
         }
     }
